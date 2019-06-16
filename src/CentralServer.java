@@ -15,9 +15,9 @@ import java.util.concurrent.TimeoutException;
 public class CentralServer {
     private final static String EXCHANGE_NAME = "topic_bus";
     private final static String[] BUS_NUM = {"2", "24", "4"};
-    public static LocalTime time;
-    public static int num = 0;
-    public static String name = "output0.txt";
+    private static LocalTime time;
+    private static int num = 0;
+    private static String name = "output0.txt";
 
     public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
         ConnectionFactory factory = new ConnectionFactory ();

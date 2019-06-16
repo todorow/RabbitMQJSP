@@ -55,34 +55,16 @@ public class BusClient extends Thread {
     public void run() {
         ConnectionFactory factory = new ConnectionFactory ();
         Connection connection = null;
-        try {
-            connection = factory.newConnection ();
-        } catch (IOException e) {
-            e.printStackTrace ();
-        } catch (TimeoutException e) {
-            e.printStackTrace ();
-        }
         Channel channel = null;
-        try {
-            channel = connection.createChannel ();
-        } catch (IOException e) {
-            e.printStackTrace ();
-        }
-        try {
-            channel.exchangeDeclare (EXCHANGE_NAME, "topic");
-        } catch (IOException e) {
-            e.printStackTrace ();
-        }
         String routingKey = busNumber;
         String queueName = null;
         try {
+            connection = factory.newConnection ();
+            channel = connection.createChannel ();
+            channel.exchangeDeclare (EXCHANGE_NAME, "topic");
             queueName = channel.queueDeclare ().getQueue ();
-        } catch (IOException e) {
-            e.printStackTrace ();
-        }
-        try {
             channel.queueBind (queueName, EXCHANGE_NAME, routingKey);
-        } catch (IOException e) {
+        } catch (IOException | TimeoutException e) {
             e.printStackTrace ();
         }
         System.out.println ("[x] i will send data from the bus for every 5 seconds ");
@@ -97,15 +79,12 @@ public class BusClient extends Thread {
 
         while (true) {
             try {
-                channel.basicPublish (EXCHANGE_NAME, routingKey, null, this.toString ().getBytes ("UTF-8"));
-            } catch (IOException e) {
-                e.printStackTrace ();
-            }
-            try {
+                channel.basicPublish (EXCHANGE_NAME, routingKey, null, this.toString ().getBytes (StandardCharsets.UTF_8));
                 Thread.sleep (5000);
-            } catch (InterruptedException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace ();
             }
+
             generateNewNumbers ();
         }
     }
