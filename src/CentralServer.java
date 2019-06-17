@@ -15,11 +15,11 @@ import java.util.concurrent.TimeoutException;
 public class CentralServer {
     private final static String EXCHANGE_NAME = "topic_bus";
     private final static String[] BUS_NUM = {"2", "24", "4"};
-    public static LocalTime time;
-    public static int num = 0;
-    public static String name = "output0.txt";
+    private static LocalTime TIME;
+    private static int NUM = 0;
+    private static String NAME = "output0.txt";
 
-    public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
+    public static void main(String[] args) throws IOException, TimeoutException {
         ConnectionFactory factory = new ConnectionFactory ();
         Connection connection = factory.newConnection ();
         Channel channel = connection.createChannel ();
@@ -35,19 +35,19 @@ public class CentralServer {
 
             String message = new String (delivery.getBody (), StandardCharsets.UTF_8);
 
-            if (ChronoUnit.MILLIS.between (time, LocalTime.now ()) >= 3600000) {
-                time=LocalTime.now ();
-                num++;
-                name = "output" + num + ".txt";
+            if (ChronoUnit.MILLIS.between (TIME, LocalTime.now ()) >= 3600000) {
+                TIME = LocalTime.now ();
+                NUM++;
+                NAME = "output" + NUM + ".txt";
             }
             System.out.println ("[x] Data successfully received form BUS CLIENT " +
                     delivery.getEnvelope ().getRoutingKey () + "':'" + message + "'");
-            Writer outputStream = new FileWriter (new File (name), true);
+            Writer outputStream = new FileWriter (new File (NAME), true);
             outputStream.write (message.concat ("\n"));
             outputStream.flush ();
             outputStream.close ();
         };
-        time = LocalTime.now ();
+        TIME = LocalTime.now ();
         channel.basicConsume (queueName, true, EXCHANGE_NAME, deliverCallback, consumerTag -> {
         });
 

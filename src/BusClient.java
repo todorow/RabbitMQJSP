@@ -1,22 +1,18 @@
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.DeliverCallback;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeoutException;
 
+@SuppressWarnings("WeakerAccess")
 public class BusClient extends Thread {
     private final static String EXCHANGE_NAME = "topic_bus";
-    private String busNumber;
+    private final String busNumber;
     private int temperature;
     private double humidity;
     private Location location;
-
-    public BusClient(String busNumber) {
-        this.busNumber = busNumber;
-    }
 
     public BusClient(String busNumber, int temperature, double humidity, Location location) {
         this.busNumber = busNumber;
@@ -25,7 +21,7 @@ public class BusClient extends Thread {
         this.location = location;
     }
 
-    public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
+    public static void main(String[] args) {
 
         BusClient client = new BusClient ("2", 23, 0.2, new Location (413123131231L, 31231231L));
         client.start ();
@@ -33,9 +29,8 @@ public class BusClient extends Thread {
         client2.start ();
     }
 
-    public void generateNewNumbers() {
-        ++location.lognitude;
-        ++location.lagnitude;
+    private void generateNewNumbers() {
+        location.update ();
         ++humidity;
         --temperature;
 
@@ -54,77 +49,35 @@ public class BusClient extends Thread {
     @Override
     public void run() {
         ConnectionFactory factory = new ConnectionFactory ();
-        Connection connection = null;
+        Connection connection;
+        Channel channel = null;
+        String routingKey = busNumber;
+        String queueName;
         try {
             connection = factory.newConnection ();
-        } catch (IOException e) {
-            e.printStackTrace ();
-        } catch (TimeoutException e) {
-            e.printStackTrace ();
-        }
-        Channel channel = null;
-        try {
             channel = connection.createChannel ();
-        } catch (IOException e) {
-            e.printStackTrace ();
-        }
-        try {
             channel.exchangeDeclare (EXCHANGE_NAME, "topic");
-        } catch (IOException e) {
-            e.printStackTrace ();
-        }
-        String routingKey = busNumber;
-        String queueName = null;
-        try {
             queueName = channel.queueDeclare ().getQueue ();
-        } catch (IOException e) {
-            e.printStackTrace ();
-        }
-        try {
             channel.queueBind (queueName, EXCHANGE_NAME, routingKey);
-        } catch (IOException e) {
+        } catch (IOException | TimeoutException e) {
             e.printStackTrace ();
         }
         System.out.println ("[x] i will send data from the bus for every 5 seconds ");
+        System.out.println ("[x] for shutting down the client use CTRL+C");
 
-        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-            String message = new String (delivery.getBody (), StandardCharsets.UTF_8);
-            System.out.println ("[x] Data successfully received form CentralServer " +
-                    delivery.getEnvelope ().getRoutingKey () + "':'" + message + "'");
-
-        };
-
-
+        //noinspection InfiniteLoopStatement
         while (true) {
             try {
-                channel.basicPublish (EXCHANGE_NAME, routingKey, null, this.toString ().getBytes ("UTF-8"));
-            } catch (IOException e) {
-                e.printStackTrace ();
-            }
-            try {
+                assert channel != null;
+                channel.basicPublish (EXCHANGE_NAME, routingKey, null, this.toString ().getBytes (StandardCharsets.UTF_8));
                 Thread.sleep (5000);
-            } catch (InterruptedException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace ();
             }
+
             generateNewNumbers ();
         }
     }
 }
 
-class Location {
-    Long lagnitude;
-    Long lognitude;
 
-    public Location(Long lagnitude, Long lognitude) {
-        this.lagnitude = lagnitude;
-        this.lognitude = lognitude;
-    }
-
-    @Override
-    public String toString() {
-        return "Location{" +
-                "lagnitude=" + lagnitude +
-                ", lognitude=" + lognitude +
-                '}';
-    }
-}
